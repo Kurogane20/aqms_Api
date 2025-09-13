@@ -12,7 +12,7 @@ router = APIRouter(prefix="/data", tags=["sensors"])
 @router.get("/latest/flat", response_model=SensorFlat | dict)
 async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)):
     q = text("""
-        SELECT uid, ts, co, pm25, pm10, tvoc
+        SELECT uid, ts, co, pm25, pm10, tvoc, so2, o3, no, no2, rh, temp, windSpeed, windDir, noise
         FROM sensor_data
         WHERE (:uid IS NULL OR uid = :uid)
         ORDER BY ts DESC
@@ -29,6 +29,15 @@ async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)
         pm25=r["pm25"],
         pm10=r["pm10"],
         tvoc=r["tvoc"],
+        o3=r["o3"],
+        so2=r["so2"],
+        no=r["no"],
+        no2=r["no2"],
+        temp=r["temp"],
+        humidity=r["rh"],
+        windSpeed=r["windSpeed"],
+        windDir=r["windDir"],
+        noise=r["noise"],
     )
 
 @router.get("", response_model=PageOutSensors)
@@ -84,6 +93,16 @@ async def list_data(
             pm25=r.pm25,
             pm10=r.pm10,
             tvoc=r.tvoc,
+            o3=r.o3,
+            so2=r.so2,
+            no=r.no,
+            no2=r.no2,
+            temp=r.temp,
+            humidity=r.rh,
+            windSpeed=r.windSpeed,
+            windDir=r.windDir,
+            noise=r.noise,
+            
             # raw=r.raw,  # aktifkan kalau butuh payload mentah
         )
         for r in rows

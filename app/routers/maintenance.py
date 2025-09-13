@@ -96,6 +96,7 @@ async def list_maintenance(
             MaintenanceOut(
                 id=r.id,
                 uid=r.uid,
+                title=r.title,
                 technician=r.technician,
                 description=r.description,
                 performed_at=r.performed_at,
