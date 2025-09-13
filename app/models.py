@@ -23,6 +23,8 @@ class SensorData(Base):
     windDir: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     noise: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     raw: Mapped[dict | None] = mapped_column(JSON, nullable=True)
+    wind_speed_kmh: Mapped[float | None] = mapped_column(Float, nullable=True)
+    wind_txt: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 Index("ix_sensor_uid_ts", SensorData.uid, SensorData.ts)
 

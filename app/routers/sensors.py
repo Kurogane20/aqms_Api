@@ -12,7 +12,7 @@ router = APIRouter(prefix="/data", tags=["sensors"])
 @router.get("/latest/flat", response_model=SensorFlat | dict)
 async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)):
     q = text("""
-        SELECT uid, ts, co, pm25, pm10, tvoc, so2, o3, no, no2, rh, temp, windSpeed, windDir, noise
+        SELECT uid, ts, co, pm25, pm10, tvoc, so2, o3, no, no2, rh, temp, wind_speed_kmh, wind_txt, noise
         FROM sensor_data
         WHERE (:uid IS NULL OR uid = :uid)
         ORDER BY ts DESC
@@ -33,10 +33,10 @@ async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)
         so2=r["so2"],
         no=r["no"],
         no2=r["no2"],
-        temp=r["temp"],
+        rh=r["rh"],
         humidity=r["rh"],
-        windSpeed=r["windSpeed"],
-        windDir=r["windDir"],
+        wind_speed_kmh=r["wind_speed_kmh"],
+        wind_txt=r["wind_txt"],
         noise=r["noise"],
     )
 
@@ -98,11 +98,11 @@ async def list_data(
             no=r.no,
             no2=r.no2,
             temp=r.temp,
-            humidity=r.rh,
-            windSpeed=r.windSpeed,
-            windDir=r.windDir,
+            rh=r.rh,
+            wind_speed_kmh=r.wind_speed_kmh,
+            wind_txt=r.wind_txt,
             noise=r.noise,
-            
+
             # raw=r.raw,  # aktifkan kalau butuh payload mentah
         )
         for r in rows
