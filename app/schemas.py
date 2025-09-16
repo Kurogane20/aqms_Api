@@ -40,6 +40,8 @@ class SensorPoint(BaseModel):
     temp: Optional[float] = None
     wind_speed_kmh: Optional[float] = None
     wind_txt: Optional[str] = None
+    voltage: Optional[float] = None
+    current: Optional[float] = None
 
     
 
@@ -62,6 +64,8 @@ class SensorPoint(BaseModel):
             "temp": self.temp,
             "wind_speed_kmh": self.wind_speed_kmh,
             "wind_txt": self.wind_txt,
+            "voltage": self.voltage,
+            "current": self.current,
         }
 
 class IngestBody(BaseModel):
@@ -83,6 +87,8 @@ class SensorFlat(BaseModel):
     wind_speed_kmh: float | None = None 
     wind_txt: str | None = None
     noise: float | None = None
+    voltage: float | None = None
+    current: float | None = None
 
 # ==== Maintenance ====
 class MaintenanceCreate(BaseModel):
@@ -132,6 +138,8 @@ class SensorOut(BaseModel):
     wind_speed_kmh: float | None = None
     wind_txt: str | None = None
     noise: float | None = None
+    voltage: float | None = None
+    current: float | None = None
     
     # kalau mau lihat payload asli, aktifkan kolom ini & endpoint diubah untuk include raw
     # raw: dict | None = None

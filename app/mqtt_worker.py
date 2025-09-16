@@ -131,7 +131,7 @@ class MQTTWorker:
             rows: List[SensorPoint] = []
             if isinstance(body, dict):
                 body = normalize_one(body)
-                sp_kwargs = {k: body.get(k) for k in ("uid", "datetime", "co", "pm25", "pm10", "tvoc", "o3", "so2", "no", "no2", "temp", "rh", "wind_speed_kmh", "wind_txt", "noise")}
+                sp_kwargs = {k: body.get(k) for k in ("uid", "datetime", "co", "pm25", "pm10", "tvoc", "o3", "so2", "no", "no2", "temp", "rh", "wind_speed_kmh", "wind_txt", "noise", "voltage", "current")}
                 rows.append(SensorPoint(**sp_kwargs))
                 raw_for_db = body
             elif isinstance(body, list):
@@ -140,7 +140,7 @@ class MQTTWorker:
                     if not isinstance(item, dict):
                         raise ValueError("Array elements must be JSON objects")
                     item = normalize_one(item)
-                    sp_kwargs = {k: item.get(k) for k in ("uid", "datetime", "co", "pm25", "pm10", "tvoc", "o3", "so2", "no", "no2", "temp", "rh", "wind_speed_kmh", "wind_txt", "noise")}
+                    sp_kwargs = {k: item.get(k) for k in ("uid", "datetime", "co", "pm25", "pm10", "tvoc", "o3", "so2", "no", "no2", "temp", "rh", "wind_speed_kmh", "wind_txt", "noise", "voltage", "current")}
                     rows.append(SensorPoint(**sp_kwargs))
                     raw_for_db.append(item)
             else:

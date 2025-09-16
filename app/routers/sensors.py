@@ -6,13 +6,16 @@ from ..schemas import IngestBody, SensorPoint, SensorFlat, SensorOut, PageOutSen
 from ..utils.pagination import paginate_meta
 from ..models import SensorData
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+JAKARTA = ZoneInfo("Asia/Jakarta")
 
 router = APIRouter(prefix="/data", tags=["sensors"])
 
 @router.get("/latest/flat", response_model=SensorFlat | dict)
 async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)):
     q = text("""
-        SELECT uid, ts, co, pm25, pm10, tvoc, so2, o3, no, no2, rh, temp, wind_speed_kmh, wind_txt, noise
+        SELECT uid, ts, co, pm25, pm10, tvoc, so2, o3, no, no2, rh, temp, wind_speed_kmh, wind_txt, noise, voltage, current
         FROM sensor_data
         WHERE (:uid IS NULL OR uid = :uid)
         ORDER BY ts DESC
@@ -22,9 +25,11 @@ async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)
     if not row:
         return {}
     r = dict(row)
+    ts_local = r["ts"].astimezone(JAKARTA)
+
     return SensorFlat(
         uid=r["uid"],
-        ts=r["ts"],
+        ts=ts_local.isoformat(),
         co=r["co"],
         pm25=r["pm25"],
         pm10=r["pm10"],
@@ -38,6 +43,8 @@ async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)
         wind_speed_kmh=r["wind_speed_kmh"],
         wind_txt=r["wind_txt"],
         noise=r["noise"],
+        voltage=r["voltage"],
+        current=r["current"],
     )
 
 @router.get("", response_model=PageOutSensors)
@@ -88,7 +95,7 @@ async def list_data(
         SensorOut(
             id=r.id,
             uid=r.uid,
-            ts=r.ts,
+            ts=ts_local.isoformat(),
             co=r.co,
             pm25=r.pm25,
             pm10=r.pm10,
@@ -102,6 +109,8 @@ async def list_data(
             wind_speed_kmh=r.wind_speed_kmh,
             wind_txt=r.wind_txt,
             noise=r.noise,
+            voltage=r.voltage,
+            current=r.current,
 
             # raw=r.raw,  # aktifkan kalau butuh payload mentah
         )

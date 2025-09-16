@@ -25,6 +25,8 @@ class SensorData(Base):
     raw: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     wind_speed_kmh: Mapped[float | None] = mapped_column(Float, nullable=True)
     wind_txt: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    voltage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    current: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 Index("ix_sensor_uid_ts", SensorData.uid, SensorData.ts)
 
