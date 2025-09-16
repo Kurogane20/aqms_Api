@@ -5,7 +5,7 @@ from ..db import get_db
 from ..schemas import IngestBody, SensorPoint, SensorFlat, SensorOut, PageOutSensors
 from ..utils.pagination import paginate_meta
 from ..models import SensorData
-from datetime import datetime
+from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
 JAKARTA = ZoneInfo("Asia/Jakarta")
@@ -25,7 +25,10 @@ async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)
     if not row:
         return {}
     r = dict(row)
-    ts_local = r["ts"].astimezone(JAKARTA)
+    ts_utc = r["ts"]
+    if ts_utc.tzinfo is None:  # database biasanya naive
+        ts_utc = ts_utc.replace(tzinfo=timezone.utc)
+    ts_local = ts_utc.astimezone(ZoneInfo("Asia/Jakarta"))
 
     return SensorFlat(
         uid=r["uid"],
