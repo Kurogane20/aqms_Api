@@ -58,17 +58,11 @@ async def list_data(
     per_page: int = 50,
     date_from: datetime | None = None,
     date_to: datetime | None = None,
-    order: str = "desc",  # "desc" atau "asc"
+    order: str = "desc",
 ):
-    """
-    List data sensor dengan pagination.
-    Filter: uid, rentang tanggal (UTC), urutan ts.
-    """
-    # Base statement
     stmt = select(SensorData)
     cnt = select(func.count(SensorData.id))
 
-    # Filters
     if uid:
         stmt = stmt.where(SensorData.uid == uid)
         cnt = cnt.where(SensorData.uid == uid)
@@ -82,48 +76,48 @@ async def list_data(
 
     total = (await db.execute(cnt)).scalar_one()
 
-    # Pagination meta
     per_page = max(1, min(per_page, 500))
     meta = paginate_meta(page, per_page, total)
     offset = (meta["page"] - 1) * per_page
 
-    # Order
     order_by = desc(SensorData.ts) if order.lower() != "asc" else SensorData.ts
 
-    rows = (await db.execute(
-        stmt.order_by(order_by).offset(offset).limit(per_page)
-    )).scalars().all()
-
-    ts_utc = r["ts"]
-    if ts_utc.tzinfo is None:  # database biasanya naive
-        ts_utc = ts_utc.replace(tzinfo=timezone.utc)
-    ts_local = ts_utc.astimezone(ZoneInfo("Asia/Jakarta"))
-
-    items = [
-        SensorOut(
-            id=r.id,
-            uid=r.uid,
-            ts=ts_local.isoformat(),
-            co=r.co,
-            pm25=r.pm25,
-            pm10=r.pm10,
-            tvoc=r.tvoc,
-            o3=r.o3,
-            so2=r.so2,
-            no=r.no,
-            no2=r.no2,
-            temp=r.temp,
-            rh=r.rh,
-            wind_speed_kmh=r.wind_speed_kmh,
-            wind_txt=r.wind_txt,
-            noise=r.noise,
-            voltage=r.voltage,
-            current=r.current,
-
-            # raw=r.raw,  # aktifkan kalau butuh payload mentah
+    rows = (
+        await db.execute(
+            stmt.order_by(order_by).offset(offset).limit(per_page)
         )
-        for r in rows
-    ]
+    ).scalars().all()
+
+    items = []
+    for r in rows:
+        ts_utc = r.ts
+        if ts_utc.tzinfo is None:
+            ts_utc = ts_utc.replace(tzinfo=timezone.utc)
+        ts_local = ts_utc.astimezone(JAKARTA)
+
+        items.append(
+            SensorOut(
+                id=r.id,
+                uid=r.uid,
+                ts=ts_local.isoformat(),
+                co=r.co,
+                pm25=r.pm25,
+                pm10=r.pm10,
+                tvoc=r.tvoc,
+                o3=r.o3,
+                so2=r.so2,
+                no=r.no,
+                no2=r.no2,
+                temp=r.temp,
+                rh=r.rh,
+                wind_speed_kmh=r.wind_speed_kmh,
+                wind_txt=r.wind_txt,
+                noise=r.noise,
+                voltage=r.voltage,
+                current=r.current,
+            )
+        )
+
     return {"meta": meta, "items": items}
 
 
