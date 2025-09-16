@@ -95,7 +95,7 @@ async def list_data(
         SensorOut(
             id=r.id,
             uid=r.uid,
-            ts=ts_local.isoformat(),
+            ts=r.ts.astimezone(JAKARTA),
             co=r.co,
             pm25=r.pm25,
             pm10=r.pm10,
