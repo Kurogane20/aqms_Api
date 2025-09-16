@@ -94,11 +94,16 @@ async def list_data(
         stmt.order_by(order_by).offset(offset).limit(per_page)
     )).scalars().all()
 
+    ts_utc = r["ts"]
+    if ts_utc.tzinfo is None:  # database biasanya naive
+        ts_utc = ts_utc.replace(tzinfo=timezone.utc)
+    ts_local = ts_utc.astimezone(ZoneInfo("Asia/Jakarta"))
+
     items = [
         SensorOut(
             id=r.id,
             uid=r.uid,
-            ts=r.ts.astimezone(JAKARTA),
+            ts=ts_local.isoformat(),
             co=r.co,
             pm25=r.pm25,
             pm10=r.pm10,
