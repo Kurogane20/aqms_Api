@@ -42,6 +42,7 @@ async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)
         no=r["no"],
         no2=r["no2"],
         rh=r["rh"],
+        temp=r["temp"],
         humidity=r["rh"],
         wind_speed_kmh=r["wind_speed_kmh"],
         wind_txt=r["wind_txt"],
