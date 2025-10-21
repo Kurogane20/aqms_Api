@@ -91,7 +91,7 @@ class SensorFlat(BaseModel):
     noise: float | None = None
     voltage: float | None = None
     current: float | None = None
-    c02: float | None = None  # reserved for future use
+    co2: float | None = None  # reserved for future use
 
 # ==== Maintenance ====
 class MaintenanceCreate(BaseModel):
