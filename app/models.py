@@ -27,6 +27,7 @@ class SensorData(Base):
     wind_txt: Mapped[str | None] = mapped_column(String(32), nullable=True)
     voltage: Mapped[float | None] = mapped_column(Float, nullable=True)
     current: Mapped[float | None] = mapped_column(Float, nullable=True)
+    co2: Mapped[float | None] = mapped_column(Float, nullable=True)  # reserved for future use
 
 Index("ix_sensor_uid_ts", SensorData.uid, SensorData.ts)
 

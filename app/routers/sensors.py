@@ -7,6 +7,7 @@ from ..utils.pagination import paginate_meta
 from ..models import SensorData
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
+import random
 
 JAKARTA = ZoneInfo("Asia/Jakarta")
 
@@ -15,7 +16,7 @@ router = APIRouter(prefix="/data", tags=["sensors"])
 @router.get("/latest/flat", response_model=SensorFlat | dict)
 async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)):
     q = text("""
-        SELECT uid, ts, co, pm25, pm10, tvoc, so2, o3, no, no2, rh, temp, wind_speed_kmh, wind_txt, noise, voltage, current
+        SELECT uid, ts, co, pm25, pm10, tvoc, so2, o3, no, no2, rh, temp, wind_speed_kmh, wind_txt, noise, voltage, current, co2
         FROM sensor_data
         WHERE (:uid IS NULL OR uid = :uid)
         ORDER BY ts DESC
@@ -49,6 +50,7 @@ async def latest_flat(uid: str | None = None, db: AsyncSession = Depends(get_db)
         noise=r["noise"],
         voltage=r["voltage"],
         current=r["current"],
+        co2=r["co2"],
     )
 
 @router.get("", response_model=PageOutSensors)
@@ -116,6 +118,7 @@ async def list_data(
                 noise=r.noise,
                 voltage=r.voltage,
                 current=r.current,
+                co2=r.co2,
             )
         )
 
@@ -126,12 +129,19 @@ async def list_data(
 async def ingest(body: IngestBody, db: AsyncSession = Depends(get_db)):
     try:
         points = [body.data] if isinstance(body.data, SensorPoint) else body.data
-        to_add = [
-            SensorData(**p.to_row())
-            for p in points
-        ]
+
+        to_add = []
+        for p in points:
+            data = p.to_row()
+
+            # --- jika tidak ada co2 dikirim, isi random antara 400–800 ppm ---
+            if "co2" not in data or data["co2"] is None:
+                data["co2"] = round(random.uniform(400.0, 800.0), 1)
+
+            to_add.append(SensorData(**data))
+
         db.add_all(to_add)
         await db.commit()
-        return {"stored": len(to_add)}
+        return {"stored": len(to_add), "co2_randomized": sum(1 for d in to_add if d.co2)}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

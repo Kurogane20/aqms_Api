@@ -42,6 +42,7 @@ class SensorPoint(BaseModel):
     wind_txt: Optional[str] = None
     voltage: Optional[float] = None
     current: Optional[float] = None
+    co2: Optional[float] = None  # reserved for future use
 
     
 
@@ -66,6 +67,7 @@ class SensorPoint(BaseModel):
             "wind_txt": self.wind_txt,
             "voltage": self.voltage,
             "current": self.current,
+            "co2": self.co2,
         }
 
 class IngestBody(BaseModel):
@@ -89,6 +91,7 @@ class SensorFlat(BaseModel):
     noise: float | None = None
     voltage: float | None = None
     current: float | None = None
+    c02: float | None = None  # reserved for future use
 
 # ==== Maintenance ====
 class MaintenanceCreate(BaseModel):
@@ -140,6 +143,7 @@ class SensorOut(BaseModel):
     noise: float | None = None
     voltage: float | None = None
     current: float | None = None
+    co2: float | None = None  # reserved for future use
     
     # kalau mau lihat payload asli, aktifkan kolom ini & endpoint diubah untuk include raw
     # raw: dict | None = None
