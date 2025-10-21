@@ -13,6 +13,10 @@ from .db import SessionLocal
 from .models import SensorData
 from .schemas import SensorPoint
 
+from datetime import datetime, timezone
+import hashlib
+import random  # boleh dihapus jika tidak ingin opsi acak sama sekali
+
 class MQTTWorker:
     def __init__(self):
         self._task: Optional[asyncio.Task] = None
@@ -101,17 +105,19 @@ class MQTTWorker:
 
     async def _handle_message(self, topic: str, payload: bytes):
         try:
-            text = payload.decode("utf-8", errors="replace").strip()
-            if not text:
+            payload_text = payload.decode("utf-8", errors="replace").strip()
+            if not payload_text:
                 return
 
+            # parse JSON
             try:
-                body = json.loads(text)
+                body = json.loads(payload_text)
             except json.JSONDecodeError:
                 if settings.APP_DEBUG:
                     print(f"[MQTT] Skip non-JSON on {topic}: {payload[:80]!r}")
                 return
 
+            # fallback uid dari topic: mis. aqm/<UID>/telemetry
             try:
                 parts = topic.split("/")
                 uid_from_topic = parts[1] if len(parts) >= 2 else None
@@ -128,10 +134,25 @@ class MQTTWorker:
                             break
                 return obj
 
+            # --- fungsi lokal untuk pseudo CO2 (deterministik) ---
+            def _pseudo_co2(_uid: str, _ts_utc: datetime, lo=420.0, hi=820.0) -> float:
+                if _ts_utc.tzinfo is None:
+                    _ts_utc = _ts_utc.replace(tzinfo=timezone.utc)
+                key = f"{_uid}|{int(_ts_utc.timestamp())}"
+                h = int(hashlib.md5(key.encode()).hexdigest()[:8], 16)  # 32-bit
+                frac = h / 0xFFFFFFFF
+                return round(lo + frac * (hi - lo), 1)
+
+            # ------ susun rows ------
             rows: List[SensorPoint] = []
+            raw_for_db = None
+
             if isinstance(body, dict):
                 body = normalize_one(body)
-                sp_kwargs = {k: body.get(k) for k in ("uid", "datetime", "co", "pm25", "pm10", "tvoc", "o3", "so2", "no", "no2", "temp", "rh", "wind_speed_kmh", "wind_txt", "noise", "voltage", "current")}
+                sp_kwargs = {k: body.get(k) for k in (
+                    "uid","datetime","co","pm25","pm10","tvoc","o3","so2","no","no2",
+                    "temp","rh","wind_speed_kmh","wind_txt","noise","voltage","current","co2"
+                )}
                 rows.append(SensorPoint(**sp_kwargs))
                 raw_for_db = body
             elif isinstance(body, list):
@@ -140,7 +161,10 @@ class MQTTWorker:
                     if not isinstance(item, dict):
                         raise ValueError("Array elements must be JSON objects")
                     item = normalize_one(item)
-                    sp_kwargs = {k: item.get(k) for k in ("uid", "datetime", "co", "pm25", "pm10", "tvoc", "o3", "so2", "no", "no2", "temp", "rh", "wind_speed_kmh", "wind_txt", "noise", "voltage", "current")}
+                    sp_kwargs = {k: item.get(k) for k in (
+                        "uid","datetime","co","pm25","pm10","tvoc","o3","so2","no","no2",
+                        "temp","rh","wind_speed_kmh","wind_txt","noise","voltage","current","co2"
+                    )}
                     rows.append(SensorPoint(**sp_kwargs))
                     raw_for_db.append(item)
             else:
@@ -150,13 +174,39 @@ class MQTTWorker:
                 to_add = []
                 for i, p in enumerate(rows):
                     raw_item = raw_for_db[i] if isinstance(raw_for_db, list) else raw_for_db
-                    rec = SensorData(**p.to_row(), raw=json.loads(json.dumps(raw_item)))
+
+                    # Pastikan UID ada
+                    if not p.uid:
+                        if settings.APP_DEBUG:
+                            print("[MQTT] skip: missing uid")
+                        continue
+
+                    # Normalisasi -> dict row siap insert (ts UTC-naive)
+                    row = p.to_row()
+
+                    # Pastikan ts ada; kalau tidak, pakai now UTC
+                    if row.get("ts") is not None:
+                        ts_utc = row["ts"].replace(tzinfo=timezone.utc)
+                    else:
+                        ts_utc = datetime.utcnow().replace(tzinfo=timezone.utc)
+                        row["ts"] = ts_utc.replace(tzinfo=None)
+
+                    # **ISI CO2 jika kosong** (selalu, tanpa setting)
+                    if row.get("co2") is None:
+                        row["co2"] = _pseudo_co2(p.uid, ts_utc)
+                        # Jika kamu ingin acak benar2, ganti baris di atas dengan:
+                        # row["co2"] = round(random.uniform(400.0, 800.0), 1)
+
+                    rec = SensorData(**row, raw=json.loads(json.dumps(raw_item)))
                     to_add.append(rec)
-                session.add_all(to_add)
-                await session.commit()
+
+                if to_add:
+                    session.add_all(to_add)
+                    await session.commit()
 
             if settings.APP_DEBUG:
-                print(f"[MQTT] {topic} → stored {len(rows)} row(s)")
+                print(f"[MQTT] {topic} → stored {len(to_add)} row(s)")
 
         except Exception as e:
             print(f"[MQTT] Handler error: {e}")
+
