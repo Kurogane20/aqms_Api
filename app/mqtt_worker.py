@@ -14,8 +14,11 @@ from .models import SensorData
 from .schemas import SensorPoint
 
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 import hashlib
 import random  # boleh dihapus jika tidak ingin opsi acak sama sekali
+
+JAKARTA = ZoneInfo("Asia/Jakarta")
 
 class MQTTWorker:
     def __init__(self):
@@ -142,6 +145,22 @@ class MQTTWorker:
                 h = int(hashlib.md5(key.encode()).hexdigest()[:8], 16)  # 32-bit
                 frac = h / 0xFFFFFFFF
                 return round(lo + frac * (hi - lo), 1)
+            
+            def _co2_by_rule(_uid: str, _ts_utc: datetime) -> float:
+                ts_local = _ts_utc.astimezone(JAKARTA)
+                hour = ts_local.hour
+                siang = 6 <= hour < 18  # 06:00–17:59
+
+                if _uid == "aqmsFOEmmEPISI01":
+                    lo, hi = (300.0, 400.0) if siang else (50.0, 100.0)
+                    return round(random.uniform(lo, hi), 1)
+
+                if _uid == "aqmsFOEmmEPISI02":
+                    lo, hi = (300.0, 400.0) if siang else (500.0, 600.0)
+                    return round(random.uniform(lo, hi), 1)
+
+                # Fallback untuk UID lain: pakai pseudo yang sudah ada (stabil)
+                return _pseudo_co2(_uid, _ts_utc)
 
             # ------ susun rows ------
             rows: List[SensorPoint] = []
@@ -193,7 +212,7 @@ class MQTTWorker:
 
                     # **ISI CO2 jika kosong** (selalu, tanpa setting)
                     if row.get("co2") is None:
-                        row["co2"] = _pseudo_co2(p.uid, ts_utc)
+                        row["co2"] = _co2_by_rule(p.uid, ts_utc)
                         # Jika kamu ingin acak benar2, ganti baris di atas dengan:
                         # row["co2"] = round(random.uniform(400.0, 800.0), 1)
 
