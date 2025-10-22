@@ -152,7 +152,7 @@ class MQTTWorker:
                 siang = 6 <= hour < 18  # 06:00–17:59
 
                 if _uid == "aqmsFOEmmEPISI01":
-                    lo, hi = (300.0, 400.0) if siang else (50.0, 100.0)
+                    lo, hi = (50.0, 100.0) if siang else (300.0, 400.0)
                     return round(random.uniform(lo, hi), 1)
 
                 if _uid == "aqmsFOEmmEPISI02":
